@@ -1,0 +1,220 @@
+[build-system]
+requires = ["setuptools>=70.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "temporal_workflow_api_starter"
+version = "1.0.0"
+description = "Template: FastAPI gateway for Temporal workflows - customize for your project"
+authors = [{ name = "Booz Allen Hamilton" }]
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE*", "NOTICE*"]
+requires-python = ">=3.15,<3.16"
+
+dependencies = [
+    # Core FastAPI and ASGI
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.23.0",
+
+    # Temporal client for workflow management
+    "temporalio>=1.11.0",
+
+    # Foundry Temporal patterns
+    "foundry-temporal>=4.0.0,<5.0.0",
+    # Imported directly (src/config.py, src/models.py) and also pulled in by
+    # foundry-temporal; tool.uv.sources routes it to the artifactory index.
+    "foundry-agent-core>=1.4.0,<2.0.0",
+
+    # Essential for FastAPI APIs
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+
+    # Configuration and serialization
+    "pyyaml>=6.0.2",
+    "python-dotenv>=1.0.0",
+
+    # HTTP client and utilities
+    "httpx>=0.24.0",
+
+    # Structured logging and observability
+    "structlog>=24.5.0",
+
+    # Pinned to resolve CVEs in transitive deps
+    "aiohttp>=3.14.4",
+    "certifi>=2026.10.19",
+    "requests>=2.33.0",
+    "multidict>=6.9.1",
+]
+
+
+[project.urls]
+"Homepage" = "https://github.com/your-org/temporal-workflow-api-starter"
+"Bug Reports" = "https://github.com/your-org/temporal-workflow-api-starter/issues"
+"Source" = "https://github.com/your-org/temporal-workflow-api-starter"
+"Documentation" = "https://boozallen.github.io/agent-foundry/docs/"
+
+[tool.uv]
+# watchfiles (via uvicorn[standard]): 1.2.0 has no Python 3.15
+# Windows wheel, so it builds from Rust source and fails.
+# virtualenv (dev-only): multiple CVEs, fixed in 21.14.13 (CVE-2026-115586,
+# GHSA-cx6f-vjhg-g3cc - bash activator PS1 command injection).
+# filelock: CVE-2026-112940, CVE-2026-112913, CVE-2026-112907, fixed in 4.2.1.
+# msgpack: CVE-2026-114613, fixed in 1.2.3.
+# opentelemetry-api: CVE-2026-126360 (traceparent ReDoS), fixed in 1.45.2.
+constraint-dependencies = [
+    "watchfiles>=1.3.0",
+    "virtualenv>=21.14.13",
+    "filelock>=4.2.1",
+    "msgpack>=1.2.3",
+    "opentelemetry-api>=1.45.2",
+]
+
+[tool.uv.sources]
+foundry-agent-core = {url = "https://github.com/boozallen/foundry-agent-packages/releases/download/foundry-agent-core/v1.4.0/foundry_agent_core-1.4.0-py3-none-any.whl"}
+foundry-temporal = {url = "https://github.com/boozallen/temporal-packages/releases/download/foundry-temporal/v4.0.0/foundry_temporal-4.0.0-py3-none-any.whl"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+"*" = ["py.typed"]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+exclude_also = [
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\b.*:",
+]
+
+[tool.basedpyright]
+pythonVersion = "3.15"
+include = ["src"]
+exclude = ["**/build", "**/dist"]
+typeCheckingMode = "basic"
+
+[tool.bandit]
+exclude_dirs = ["tests", "openspec"]
+targets = ["src"]
+skips = ["B101"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ANN", # flake8-annotations
+    "S",   # bandit security checks
+    "PTH", # flake8-use-pathlib
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+]
+ignore = [
+    "E501",
+    "B008",  # do not perform function calls in argument defaults
+    "S101",  # use of assert (common in tests)
+    "S603",  # subprocess call without shell=True
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011", "S101", "S104", "ANN"]  # allow assert False, binding to all interfaces, and annotations in tests
+"src/routers/*" = ["TC002"]  # FastAPI evaluates annotations at runtime for DI
+
+# ruff handles import sorting (replaces isort)
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# Template Documentation
+[tool.pydocstyle]
+convention = "google"
+add_ignore = ["D100", "D104", "D107"]  # Allow missing docstrings for modules, __init__, and __main__
+
+# Modern dependency groups (PEP 735)
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "pytest-xdist[psutil]>=3.8.0",
+    "ruff>=0.8.0",
+    "bandit>=1.7.0",
+    "basedpyright>=1.29.0",
+    "pip-audit>=2.7.0",
+    "pre-commit>=4.0.0",
+    "types-PyYAML>=6.0.0",
+]
+
+test = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "httpx>=0.24.0",  # For testing FastAPI endpoints
+]
+
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.7.7",
+    "mkdocstrings[python]>=0.26.0",
+]
+
+production = [
+    # Production ASGI server
+    "gunicorn>=21.2.0",
+    # Production monitoring and metrics
+    "prometheus-client>=0.21.0",  # Metrics collection only
+]
+
+# Modern pytest configuration
+[tool.pytest.ini_options]
+minversion = "9.0"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--tb=short",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=70",
+]
+testpaths = ["tests"]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow tests",
+    "api: API endpoint tests",
+]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning:pydantic.*",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+    "ignore::DeprecationWarning:fastapi.*",
+]
+
+# Note: This is a template directory, not a production package.
+# Projects created from this template should customize:
+# - Project name, version, authors, and URLs
+# - Dependencies based on specific requirements
+# - Scripts and entry points for their application
