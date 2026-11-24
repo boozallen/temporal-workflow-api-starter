@@ -1,0 +1,7 @@
+name: temporal-workflow-api-starter
+description: Template for building FastAPI gateways for Temporal workflow management
+status: stable
+category: starter-template
+nav-order: 100
+has-api: true
+openapi-path: docs/openapi.yml

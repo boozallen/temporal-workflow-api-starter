@@ -1,0 +1,364 @@
+{
+  "info": {
+    "name": "Temporal Workflow API",
+    "description": "TEMPLATE: API gateway for Temporal workflow management operations.\n\n✅ READY TO TEST:\n1. Health checks work immediately\n2. Template workflow: 'MyWorkflow' (includes HITL + Mock Agent patterns)\n3. Environment pre-configured with signals and queries for testing\n\n🚀 QUICK START:\n1. Set apiAuthToken in the environment to your API_AUTH_TOKEN (/workflows/* requests are rejected without it)\n2. Test health checks to verify API connectivity\n3. Start MyWorkflow - demonstrates both Human-in-the-Loop and Agent integration\n4. Deploy worker services using temporal-workflow-worker-starter template to execute workflows\n\n💡 MyWorkflow demonstrates both design document requirements: HITL patterns and Mock Agent integration.",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{apiAuthToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "workflowId",
+      "value": "",
+      "type": "string",
+      "description": "Workflow ID captured from start workflow response"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has healthy status\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"healthy\");",
+                  "    pm.expect(jsonData.service).to.eql(\"workflow-api\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Basic API health status check"
+          }
+        },
+        {
+          "name": "Readiness Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Service is ready\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"healthy\");",
+                  "    pm.expect(jsonData.dependencies.temporal).to.eql(\"connected\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "ready"]
+            },
+            "description": "Readiness probe with Temporal connectivity check"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workflow Operations",
+      "item": [
+        {
+          "name": "Start Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Workflow started successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.workflow_id).to.exist;",
+                  "    pm.expect(jsonData.run_id).to.exist;",
+                  "    ",
+                  "    // Save workflow_id and run_id for subsequent requests",
+                  "    pm.environment.set(\"workflowId\", jsonData.workflow_id);",
+                  "    pm.environment.set(\"runId\", jsonData.run_id);",
+                  "    console.log('Auto-captured workflowId:', jsonData.workflow_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflow_type\": \"{{workflowType}}\",\n  \"input_data\": {\n    \"user_name\": \"PostmanUser\",\n    \"task_type\": \"greeting\",\n    \"priority\": 3,\n    \"language\": \"en\",\n    \"metadata\": {\n      \"source\": \"postman-test\",\n      \"timestamp\": \"{{$timestamp}}\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workflows/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "start"]
+            },
+            "description": "Start a new workflow execution"
+          }
+        },
+        {
+          "name": "Get Workflow Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Workflow status retrieved\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.workflow_id).to.exist;",
+                  "    pm.expect(jsonData.status).to.exist;",
+                  "    pm.expect(jsonData.started_at).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "status"]
+            },
+            "description": "Get current workflow status and result"
+          }
+        },
+        {
+          "name": "List Workflows",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Workflows list retrieved\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.workflows).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/?limit={{limit}}&status_filter={{statusFilter}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", ""],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of workflows to return"
+                },
+                {
+                  "key": "status_filter",
+                  "value": "{{statusFilter}}",
+                  "description": "Filter workflows by status (RUNNING, COMPLETED, etc.)"
+                }
+              ]
+            },
+            "description": "List running workflows"
+          }
+        },
+        {
+          "name": "Query Workflow State",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Query result retrieved\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.result).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/query?query_name={{queryName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "query"],
+              "query": [
+                {
+                  "key": "query_name",
+                  "value": "{{queryName}}",
+                  "description": "Name of the query to execute"
+                }
+              ]
+            },
+            "description": "Query workflow for current state information"
+          }
+        },
+        {
+          "name": "Send Signal to Workflow",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// cancel_workflow rejects any comments value that isn't JSON null",
+                  "// (not even an empty string), so build the comments literal here",
+                  "// instead of always substituting a quoted string into the body.",
+                  "var signalName = pm.environment.get(\"signalName\");",
+                  "if (signalName === \"cancel_workflow\") {",
+                  "    pm.environment.set(\"signalCommentsPayload\", \"null\");",
+                  "} else {",
+                  "    var comments = pm.environment.get(\"signalComments\") || \"\";",
+                  "    pm.environment.set(\"signalCommentsPayload\", JSON.stringify(comments));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Signal sent successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.eql(\"Signal sent\");",
+                  "    pm.expect(jsonData.workflow_id).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signal_name\": \"{{signalName}}\",\n  \"approver_id\": \"{{approverId}}\",\n  \"comments\": {{signalCommentsPayload}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/signal",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "signal"]
+            },
+            "description": "Send a signal to a running workflow. approve/approve_plan/approve_research are not allowed here - use Approve Workflow instead. The pre-request script sets comments to JSON null automatically when signalName is cancel_workflow (which rejects any non-null comments, including an empty string); otherwise it sends signalComments as a quoted string. comments is required (non-empty) for provide_feedback/provide_plan_feedback."
+          }
+        },
+        {
+          "name": "Approve Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Workflow approved\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"approved\");",
+                  "    pm.expect(jsonData.workflow_id).to.exist;",
+                  "    pm.expect(jsonData.run_id).to.exist;",
+                  "    pm.expect(jsonData.lane).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"run_id\": \"{{runId}}\",\n  \"approver_id\": \"{{approverId}}\",\n  \"content_digest\": \"{{contentDigest}}\",\n  \"lane\": \"{{approveLane}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workflows/{{workflowId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflows", "{{workflowId}}", "approve"]
+            },
+            "description": "Approve a specific run that is awaiting review. lane is 'general' (default), 'plan', or 'research'. content_digest must match the digest of the content currently under review for that lane."
+          }
+        }
+      ]
+    }
+  ]
+}
