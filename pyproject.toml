@@ -6,9 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "temporal_workflow_api_starter"
 version = "1.0.0"
 description = "Template: FastAPI gateway for Temporal workflows - customize for your project"
-authors = [
-    {name = "Agentic AI Platform Team", email = "platform-team@example.com"}
-]
+authors = [{ name = "Booz Allen Hamilton" }]
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE*", "NOTICE*"]
