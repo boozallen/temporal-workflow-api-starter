@@ -50,9 +50,6 @@ dependencies = [
 ]
 
 
-[project.scripts]
-api-server = "src.main:run_server"
-
 [project.urls]
 "Homepage" = "https://github.com/your-org/temporal-workflow-api-starter"
 "Bug Reports" = "https://github.com/your-org/temporal-workflow-api-starter/issues"
