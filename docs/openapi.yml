@@ -1,0 +1,640 @@
+openapi: 3.1.0
+info:
+  title: Workflow API
+  description: REST API for managing Temporal workflows with foundry-temporal
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      tags:
+      - Health
+      summary: Health check
+      description: Basic API health status
+      operationId: health_check_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+  /health/detailed:
+    get:
+      tags:
+      - Health
+      summary: Detailed health check
+      description: Comprehensive health status with all dependency details
+      operationId: detailed_health_check_health_detailed_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+  /health/temporal:
+    get:
+      tags:
+      - Health
+      summary: Temporal connectivity check
+      description: Check Temporal server connectivity status
+      operationId: temporal_health_check_health_temporal_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+  /health/ready:
+    get:
+      tags:
+      - Health
+      summary: Readiness check
+      description: Kubernetes readiness probe. Returns 503 when Temporal is unreachable
+        (connect failure, probe timeout, or a probe status that does not show Temporal
+        handled the request), and 200 with dependencies.temporal 'degraded' when Temporal
+        rejects the probe.
+      operationId: readiness_check_health_ready_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+        '503':
+          description: Temporal unreachable; not ready to receive traffic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+  /workflows/start:
+    post:
+      tags:
+      - Workflows
+      summary: Start workflow
+      description: Start a new workflow execution
+      operationId: start_workflow_workflows_start_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowStartRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowStartResponse'
+        '409':
+          description: A workflow with this workflow_id already exists
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+  /workflows/{workflow_id}/status:
+    get:
+      tags:
+      - Workflows
+      summary: Get workflow status
+      description: Get current workflow status and result
+      operationId: get_workflow_status_workflows__workflow_id__status_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: workflow_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Workflow ID
+          title: Workflow Id
+        description: Workflow ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowStatusResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /workflows/:
+    get:
+      tags:
+      - Workflows
+      summary: List workflows
+      description: List running workflows
+      operationId: list_workflows_workflows__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Maximum number of workflows to return
+          default: 10
+          title: Limit
+        description: Maximum number of workflows to return
+      - name: status_filter
+        in: query
+        required: false
+        schema:
+          enum:
+          - Running
+          - Completed
+          - Failed
+          - Canceled
+          - Terminated
+          - ContinuedAsNew
+          - TimedOut
+          type: string
+          description: 'Filter by workflow status. Valid values: Running, Completed,
+            Failed, Canceled, Terminated, ContinuedAsNew, TimedOut'
+          examples:
+          - Running
+          - Completed
+          - Failed
+          default: Running
+          title: Status Filter
+        description: 'Filter by workflow status. Valid values: Running, Completed,
+          Failed, Canceled, Terminated, ContinuedAsNew, TimedOut'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response List Workflows Workflows  Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /workflows/{workflow_id}/query:
+    get:
+      tags:
+      - Workflows
+      summary: Query workflow state
+      description: Query workflow for current state information
+      operationId: query_workflow_workflows__workflow_id__query_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: workflow_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Workflow ID
+          title: Workflow Id
+        description: Workflow ID
+      - name: query_name
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 64
+          default: get_status
+          title: Query Name
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                title: Response Query Workflow Workflows  Workflow Id  Query Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /workflows/{workflow_id}/approve:
+    post:
+      tags:
+      - Workflows
+      summary: Approve workflow
+      description: Send the approve signal to a specific run that is awaiting review.
+        Requires the run ID, approver identity, and a digest of the reviewed content;
+        fails if the run is not awaiting review.
+      operationId: approve_workflow_workflows__workflow_id__approve_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: workflow_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Workflow ID
+          title: Workflow Id
+        description: Workflow ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowApproveRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                title: Response Approve Workflow Workflows  Workflow Id  Approve Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /workflows/{workflow_id}/signal:
+    post:
+      tags:
+      - Workflows
+      summary: Send signal to workflow
+      description: Send an arbitrary signal to a running workflow
+      operationId: signal_workflow_workflows__workflow_id__signal_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: workflow_id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Workflow ID
+          title: Workflow Id
+        description: Workflow ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowSignalRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                title: Response Signal Workflow Workflows  Workflow Id  Signal Post
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    HealthCheckResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+          description: Health status
+        service:
+          type: string
+          title: Service
+          description: Service name
+        timestamp:
+          type: string
+          format: date-time
+          title: Timestamp
+          description: Check timestamp
+        version:
+          type: string
+          title: Version
+          description: API version
+        dependencies:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Dependencies
+          description: Status of dependencies
+      type: object
+      required:
+      - status
+      - service
+      - timestamp
+      - version
+      title: HealthCheckResponse
+      description: Health check response.
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    WorkflowApproveRequest:
+      properties:
+        run_id:
+          type: string
+          maxLength: 256
+          minLength: 1
+          title: Run Id
+          description: Run ID of the awaiting-review run to approve
+          example: 019c2fd0-2bae-7420-942f-e37c8e83b1ce
+        approver_id:
+          type: string
+          maxLength: 256
+          minLength: 1
+          title: Approver Id
+          description: Identity of the approver, recorded on the workflow
+          example: jane.doe@example.com
+        content_digest:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Content Digest
+          description: Digest of the content the approver reviewed
+          example: 3f786850e387550fdab836ed7e6dc881de23001b
+        lane:
+          type: string
+          enum:
+          - general
+          - plan
+          - research
+          title: Lane
+          description: Review lane to approve. 'general' (default) uses the approve
+            signal; 'plan' and 'research' use the plan/research review lanes, each
+            with their own awaiting-review state and approved-by field.
+          default: general
+          example: general
+      type: object
+      required:
+      - run_id
+      - approver_id
+      - content_digest
+      title: WorkflowApproveRequest
+      description: Request to approve a specific run that is awaiting review.
+    WorkflowSignalRequest:
+      properties:
+        signal_name:
+          type: string
+          maxLength: 64
+          minLength: 1
+          title: Signal Name
+          description: Name of the signal to send. Must be one of the gateway's allowed
+            signals - see ALLOWED_SIGNALS.
+          example: provide_feedback
+        approver_id:
+          type: string
+          maxLength: 256
+          minLength: 1
+          title: Approver Id
+          description: Identity of the caller sending this signal
+          example: jane.doe@example.com
+        comments:
+          anyOf:
+          - type: string
+            maxLength: 65536
+          - type: 'null'
+          title: Comments
+          description: Feedback comments. Required for provide_feedback and provide_plan_feedback;
+            not accepted for cancel_workflow.
+          example: fix the introduction section
+      type: object
+      required:
+      - signal_name
+      - approver_id
+      title: WorkflowSignalRequest
+      description: 'Request to send a signal. Every allowed signal requires approver_id;
+
+        provide_feedback and provide_plan_feedback also require comments.'
+    WorkflowStartRequest:
+      properties:
+        workflow_type:
+          type: string
+          maxLength: 256
+          minLength: 1
+          title: Workflow Type
+          description: Type of workflow to start
+          example: MyWorkflow
+        workflow_id:
+          anyOf:
+          - type: string
+            maxLength: 256
+            minLength: 1
+          - type: 'null'
+          title: Workflow Id
+          description: Optional workflow ID (auto-generated if not provided)
+        task_queue:
+          anyOf:
+          - type: string
+            maxLength: 256
+            minLength: 1
+          - type: 'null'
+          title: Task Queue
+          description: Task queue to execute workflow on (uses default if not provided)
+        input_data:
+          additionalProperties: true
+          type: object
+          title: Input Data
+          description: Input data for the workflow
+          example:
+            language: en
+            metadata:
+              source: swagger-docs
+              timestamp: '2026-02-05T12:00:00Z'
+            priority: 3
+            task_type: greeting
+            user_name: PostmanUser
+      type: object
+      required:
+      - workflow_type
+      title: WorkflowStartRequest
+      description: 'TEMPLATE: Request to start a workflow - customize fields as needed.'
+      example:
+        input_data:
+          language: en
+          metadata:
+            source: swagger-docs
+            timestamp: '2026-02-05T12:00:00Z'
+          priority: 3
+          task_type: greeting
+          user_name: PostmanUser
+        task_queue: workflow-task-queue
+        workflow_id: custom-workflow-123
+        workflow_type: MyWorkflow
+    WorkflowStartResponse:
+      properties:
+        workflow_id:
+          type: string
+          title: Workflow Id
+          description: ID of the started workflow
+          example: MyWorkflow-abc12345
+        run_id:
+          type: string
+          title: Run Id
+          description: Run ID of the workflow execution
+          example: 019c2fd0-2bae-7420-942f-e37c8e83b1ce
+        task_queue:
+          type: string
+          title: Task Queue
+          description: Task queue the workflow is running on
+          example: workflow-task-queue
+        started_at:
+          type: string
+          format: date-time
+          title: Started At
+          description: When the workflow was started
+          example: '2026-02-05T21:58:17.779166Z'
+      type: object
+      required:
+      - workflow_id
+      - run_id
+      - task_queue
+      - started_at
+      title: WorkflowStartResponse
+      description: Response when starting a workflow.
+    WorkflowStatus:
+      type: string
+      enum:
+      - running
+      - completed
+      - failed
+      - cancelled
+      - terminated
+      - continued_as_new
+      - timed_out
+      title: WorkflowStatus
+      description: Workflow execution status.
+    WorkflowStatusResponse:
+      properties:
+        workflow_id:
+          type: string
+          title: Workflow Id
+          description: Workflow ID
+        run_id:
+          type: string
+          title: Run Id
+          description: Current run ID
+        workflow_type:
+          type: string
+          title: Workflow Type
+          description: Type of workflow
+        task_queue:
+          type: string
+          title: Task Queue
+          description: Task queue
+        status:
+          $ref: '#/components/schemas/WorkflowStatus'
+          description: Current workflow status
+        started_at:
+          type: string
+          format: date-time
+          title: Started At
+          description: When the workflow started
+        completed_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Completed At
+          description: When the workflow completed
+        result:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Result
+          description: Workflow result if completed
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+          description: Error message if failed
+        history_length:
+          type: integer
+          title: History Length
+          description: Number of history events
+        pending_activities:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Pending Activities
+          description: Currently pending activities
+      type: object
+      required:
+      - workflow_id
+      - run_id
+      - workflow_type
+      - task_queue
+      - status
+      - started_at
+      - history_length
+      title: WorkflowStatusResponse
+      description: Response with workflow status information.
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer
