@@ -1,5 +1,9 @@
 # Temporal Workflow API Starter
 
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Python](https://img.shields.io/badge/python-3.15-blue)
+![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)
+
 **Template for building FastAPI gateways for Temporal workflow management**
 
 This starter template provides a REST API gateway that communicates with Temporal server for workflow management operations. **This template does NOT include workflow implementations** - use the [`temporal-workflow-worker-starter`](https://github.com/boozallen/temporal-workflow-worker-starter) template for worker services.
